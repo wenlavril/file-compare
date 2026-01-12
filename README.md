@@ -2,7 +2,6 @@
 
 一个现代化的 Web 文件对比工具，类似 Beyond Compare，支持文本对比、语法高亮、差异导航等功能。
 
-![File Compare Screenshot](screenshot.png)
 
 ## ✨ 功能特性
 
