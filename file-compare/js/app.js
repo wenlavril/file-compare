@@ -26,7 +26,7 @@ class FileCompareApp {
         
         // Performance: debounce timer
         this.debounceTimer = null;
-        this.debounceDelay = 300; // ms
+        this.debounceDelay = 16; // ms - nearly instant (one frame)
         this.isProcessing = false;
         
         // Virtualization settings
