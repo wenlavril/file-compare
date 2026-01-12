@@ -45,8 +45,7 @@ class FileCompareApp {
         this.bindEvents();
         this.syntaxHighlighter.init();
         
-        // Set initial demo content
-        this.setDemoContent();
+        // Start with empty content - no demo content on page load
     }
 
     /**
