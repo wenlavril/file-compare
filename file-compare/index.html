@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件比较工具 - File Compare</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- highlight.js for syntax highlighting - dark theme -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- jsdiff for text comparison -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.2.0/diff.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header / Toolbar -->
+        <header class="toolbar">
+            <div class="toolbar-group logo">
+                <span class="app-title">文件比较</span>
+            </div>
+            <div class="toolbar-group mode-selector">
+                <button class="toolbar-btn active" data-mode="text" title="文本比较">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M13,13V18H10V13H7L12,8L17,13H13Z"/></svg>
+                    <span>文本比较</span>
+                </button>
+                <button class="toolbar-btn" data-mode="folder" title="文件夹比较">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>
+                    <span>文件夹比较</span>
+                </button>
+            </div>
+            <div class="toolbar-group view-options">
+                <button class="toolbar-btn active" data-filter="all" title="显示全部">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3,3H21V5H3V3M3,7H21V9H3V7M3,11H21V13H3V11M3,15H21V17H3V15M3,19H21V21H3V19Z"/></svg>
+                    全部
+                </button>
+                <button class="toolbar-btn" data-filter="diff" title="仅显示差异">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
+                    差别
+                </button>
+                <button class="toolbar-btn" data-filter="same" title="仅显示相同">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg>
+                    相同
+                </button>
+            </div>
+            <div class="toolbar-group nav-buttons">
+                <button class="toolbar-btn" id="prevDiff" title="上一处差异 (↑)">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7.41,15.41L12,10.83L16.59,15.41L18,14L12,8L6,14L7.41,15.41Z"/></svg>
+                    上一区段
+                </button>
+                <button class="toolbar-btn" id="nextDiff" title="下一处差异 (↓)">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7.41,8.59L12,13.17L16.59,8.59L18,10L12,16L6,10L7.41,8.59Z"/></svg>
+                    下一区段
+                </button>
+            </div>
+            <div class="toolbar-group actions">
+                <button class="toolbar-btn" id="copyLeft" title="复制到左侧">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M20,16V10H22V16A2,2 0 0,1 20,18H8C6.89,18 6,17.1 6,16V4C6,2.89 6.89,2 8,2H16L20,6V8H18V7H15V4H8V16H20M4,4V20H18V22H4A2,2 0 0,1 2,20V4H4Z"/></svg>
+                    复制
+                </button>
+                <button class="toolbar-btn" id="swapSides" title="交换两侧">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6.99,11L3,15L6.99,19V16H14V14H6.99V11M21,9L17.01,5V8H10V10H17.01V13L21,9Z"/></svg>
+                    交换
+                </button>
+                <button class="toolbar-btn" id="exportResult" title="导出结果">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/></svg>
+                    导出
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Text Compare View -->
+            <div class="compare-view text-compare-view active" id="textCompareView">
+                <!-- Left Panel -->
+                <div class="panel left-panel">
+                    <div class="panel-header">
+                        <div class="file-input-wrapper">
+                            <input type="text" class="file-path" id="leftFilePath" placeholder="在这里输入文件名">
+                            <button class="browse-btn" id="leftBrowse" title="浏览文件">
+                                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z"/></svg>
+                            </button>
+                        </div>
+                        <div class="file-info">
+                            <span class="encoding">Unicode (UTF-8)</span>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="editor-container">
+                            <div class="line-numbers" id="leftLineNumbers"></div>
+                            <div class="code-display" id="leftDisplay"></div>
+                            <textarea class="code-input" id="leftInput" spellcheck="false" placeholder="在此粘贴或输入文本内容，或拖放文件到此处..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="divider" id="mainDivider"></div>
+
+                <!-- Right Panel -->
+                <div class="panel right-panel">
+                    <div class="panel-header">
+                        <div class="file-input-wrapper">
+                            <input type="text" class="file-path" id="rightFilePath" placeholder="在这里输入文件名">
+                            <button class="browse-btn" id="rightBrowse" title="浏览文件">
+                                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z"/></svg>
+                            </button>
+                        </div>
+                        <div class="file-info">
+                            <span class="encoding">Unicode (UTF-8)</span>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="editor-container">
+                            <div class="line-numbers" id="rightLineNumbers"></div>
+                            <div class="code-display" id="rightDisplay"></div>
+                            <textarea class="code-input" id="rightInput" spellcheck="false" placeholder="在此粘贴或输入文本内容，或拖放文件到此处..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Folder Compare View -->
+            <div class="compare-view folder-compare-view" id="folderCompareView">
+                <!-- Left Folder Panel -->
+                <div class="panel left-panel">
+                    <div class="panel-header">
+                        <div class="file-input-wrapper">
+                            <input type="text" class="file-path" id="leftFolderPath" placeholder="选择左侧文件夹">
+                            <button class="browse-btn" id="leftFolderBrowse" title="浏览文件夹">
+                                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="folder-tree" id="leftFolderTree">
+                            <div class="empty-state">
+                                <svg viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>
+                                <p>点击上方按钮选择文件夹</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="divider"></div>
+
+                <!-- Right Folder Panel -->
+                <div class="panel right-panel">
+                    <div class="panel-header">
+                        <div class="file-input-wrapper">
+                            <input type="text" class="file-path" id="rightFolderPath" placeholder="选择右侧文件夹">
+                            <button class="browse-btn" id="rightFolderBrowse" title="浏览文件夹">
+                                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="folder-tree" id="rightFolderTree">
+                            <div class="empty-state">
+                                <svg viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>
+                                <p>点击上方按钮选择文件夹</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span class="diff-count" id="diffCount">差异: 0 处</span>
+                <span class="separator">|</span>
+                <span class="line-count" id="lineCount">行数: 0 / 0</span>
+            </div>
+            <div class="status-right">
+                <span class="sync-status" id="syncStatus">同步滚动: 开启</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="leftFileInput" style="display: none" accept="*/*">
+    <input type="file" id="rightFileInput" style="display: none" accept="*/*">
+
+    <!-- Scripts -->
+    <script src="js/diff-engine.js"></script>
+    <script src="js/syntax.js"></script>
+    <script src="js/folder-compare.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
